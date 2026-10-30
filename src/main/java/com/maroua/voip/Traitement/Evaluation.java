@@ -149,11 +149,13 @@ public class Evaluation {
                     "La perte de paquets du serveur " + nomServeur + " est élevée : "
                             + valeurMoyenne + " %",
                     false);
+                     return TypeAlerte.AVERTISSEMENT;
         }
         if (indicateur == TypeIndicateur.Mos && valeurMoyenne < 3) {
             envoyerAlerte(
                     "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne,
                     true);
+                   return TypeAlerte.CRITIQUE;
         }
         return TypeAlerte.NORMAL;
     }

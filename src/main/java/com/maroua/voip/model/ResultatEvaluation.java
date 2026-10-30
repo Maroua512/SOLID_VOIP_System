@@ -19,5 +19,26 @@ public class ResultatEvaluation {
         this.date_fin = date_fin;
         this.type_alerte = type_alerte;
     }
+
+    public String getNomServeur() {
+        return nom_serveur;
+    }
+    public TypeIndicateur getTypeIndicateur() {
+        return type_indicateur;
+    }
+    public double getValeurMoyenne() {
+        return valeur_moyenne;
+    }
+    public LocalDateTime getDateDebut() {
+        return date_debut;
+    }
+    public LocalDateTime getDateFin() {
+        return date_fin;
+    }
+    public TypeAlerte getTypeAlerte() {
+        return type_alerte;
+    }
+    
+
    
 }
