@@ -18,7 +18,6 @@ public final class App {
                 new Serveur("serveur-lyon"));
 
         Evaluation evaluation = new Evaluation();
-        evaluation.intialiserEvaluations(serveurs);
 
         List<Metriques> mesures = List.of(
                 new Metriques("serveur-paris", 120.0, 12.0, 2.0, 3.8,

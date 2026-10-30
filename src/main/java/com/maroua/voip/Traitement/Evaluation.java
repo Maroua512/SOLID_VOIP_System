@@ -1,20 +1,18 @@
 package com.maroua.voip.Traitement;
 
+import com.maroua.voip.Persistance.SauvegardeDonnees;
 import com.maroua.voip.model.Metriques;
+import com.maroua.voip.model.ResultatEvaluation;
+import com.maroua.voip.model.TypeAlerte;
+import com.maroua.voip.model.TypeIndicateur;
 import com.maroua.voip.notifications.Notification;
 
-import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import com.maroua.voip.model.Serveur;
-import com.maroua.voip.model.ResultatEvaluation;
-import com.maroua.voip.model.TypeIndicateur;
-import com.maroua.voip.Persistance.SauvegardeDonnees;
-import com.maroua.voip.model.TypeAlerte;
+
 public class Evaluation {
 
     public record EvaluationMetrique(
@@ -24,11 +22,8 @@ public class Evaluation {
             int nombreValeursCollectees) {
     }
 
-    Notification notification = new Notification();
-    ResultatEvaluation resultatEvaluation;
-    List<EvaluationMetrique> evaluations = new ArrayList<>();
-    TypeAlerte typeAlerte = TypeAlerte.NORMAL;
-    SauvegardeDonnees sauvegardeDonnees = new SauvegardeDonnees();
+    private final Notification notification = new Notification();
+    private final SauvegardeDonnees sauvegardeDonnees = new SauvegardeDonnees();
 
     public Map<String, Map<TypeIndicateur, Double>> calculerMoyennesParServeur(
             List<Metriques> metriquesList) {
@@ -71,90 +66,103 @@ public class Evaluation {
             return;
         }
 
-        LocalDateTime dateDebut = metriquesList.stream()
-                .map(Metriques::getTime)
-                .map(java.sql.Timestamp::toLocalDateTime)
-                .min(LocalDateTime::compareTo)
-                .orElseThrow();
-        LocalDateTime dateFin = metriquesList.stream()
-                .map(Metriques::getTime)
-                .map(java.sql.Timestamp::toLocalDateTime)
-                .max(LocalDateTime::compareTo)
-                .orElseThrow();
+        Map<String, Map<TypeIndicateur, EvaluationMetrique>> evaluationsParServeur =
+                new LinkedHashMap<>();
+        Map<String, LocalDateTime[]> periodesParServeur = new LinkedHashMap<>();
 
         for (Metriques metrique : metriquesList) {
             String nomServeur = metrique.getNomServeur();
-            double latence = metrique.getLatence();
-            double jitter = metrique.getJitter();
-            double pertePaquets = metrique.getPertePaquets();
-            double mos = metrique.getMos();
+            Map<TypeIndicateur, EvaluationMetrique> evaluations = evaluationsParServeur
+                    .computeIfAbsent(nomServeur, nom -> new EnumMap<>(TypeIndicateur.class));
 
-            ajouterValeur(nomServeur, TypeIndicateur.Latence, latence);
-            ajouterValeur(nomServeur, TypeIndicateur.Jitter, jitter);
-            ajouterValeur(nomServeur, TypeIndicateur.PertePaquets, pertePaquets);
-            ajouterValeur(nomServeur, TypeIndicateur.Mos, mos);
+            ajouterValeur(evaluations, nomServeur, TypeIndicateur.Latence, metrique.getLatence());
+            ajouterValeur(evaluations, nomServeur, TypeIndicateur.Jitter, metrique.getJitter());
+            ajouterValeur(evaluations, nomServeur, TypeIndicateur.PertePaquets, metrique.getPertePaquets());
+            ajouterValeur(evaluations, nomServeur, TypeIndicateur.Mos, metrique.getMos());
+
+            LocalDateTime date = metrique.getTime().toLocalDateTime();
+            LocalDateTime[] periode = periodesParServeur.computeIfAbsent(
+                    nomServeur, nom -> new LocalDateTime[] { date, date });
+            if (date.isBefore(periode[0])) {
+                periode[0] = date;
+            }
+            if (date.isAfter(periode[1])) {
+                periode[1] = date;
+            }
         }
 
-        //Evaluation des métriques et envoi de notifications si nécessaire
-        for (EvaluationMetrique evaluation : evaluations) {
-            if (evaluation.nombreValeursCollectees() == 0) {
-                continue;
-            }
-            double valeurMoyenne = evaluation.valeur() / evaluation.nombreValeursCollectees();
-            TypeIndicateur indicateur = evaluation.indicateur();
+        for (Map.Entry<String, Map<TypeIndicateur, EvaluationMetrique>> serveur
+                : evaluationsParServeur.entrySet()) {
+            LocalDateTime[] periode = periodesParServeur.get(serveur.getKey());
+            for (EvaluationMetrique evaluation : serveur.getValue().values()) {
+                double valeurMoyenne = evaluation.valeur() / evaluation.nombreValeursCollectees();
+                TypeIndicateur indicateur = evaluation.indicateur();
+                TypeAlerte typeAlerte = determinerAlerte(evaluation.nomServeur(), indicateur, valeurMoyenne);
 
-            // Vérification des seuils et envoi de notifications si nécessaire
-            if (indicateur == TypeIndicateur.Latence && valeurMoyenne > 100) {
-                notification.envoyerNotificationParEmail("La latence du serveur " + evaluation.nomServeur() + " est élevée : " + valeurMoyenne + " ms", "@adminVoip.com");
-                notification.envoyerNotificationViaConsole("La latence du serveur " + evaluation.nomServeur() + " est élevée : " + valeurMoyenne + " ms", "@adminVoip.com");
-                typeAlerte = TypeAlerte.CRITIQUE;
+                sauvegardeDonnees.sauvegarderResultat(new ResultatEvaluation(
+                        evaluation.nomServeur(),
+                        indicateur,
+                        valeurMoyenne,
+                        periode[0],
+                        periode[1],
+                        typeAlerte));
             }
-            if (indicateur == TypeIndicateur.Jitter && valeurMoyenne > 10) {
-                notification.envoyerNotificationParEmail("Le jitter du serveur " + evaluation.nomServeur() + " est élevé : " + valeurMoyenne + " ms", "@adminVoip.com");
-                 typeAlerte = TypeAlerte.AVERTISSEMENT;
-            }
-            if (indicateur == TypeIndicateur.PertePaquets && valeurMoyenne > 5) {
-                notification.envoyerNotificationParEmail("La perte de paquets du serveur " + evaluation.nomServeur() + " est élevée : " + valeurMoyenne + " %", "@adminVoip.com");
-            }
-            if (indicateur == TypeIndicateur.Mos && valeurMoyenne < 3) {
-                notification.envoyerNotificationParEmail("Le MOS du serveur " + evaluation.nomServeur() + " est faible : " + valeurMoyenne, "@adminVoip.com");
-                notification.envoyerNotificationViaConsole("Le MOS du serveur " + evaluation.nomServeur() + " est faible : " + valeurMoyenne, "@adminVoip.com");
-            }
-           sauvegardeDonnees.sauvegarderResultat(new ResultatEvaluation(
-                   evaluation.nomServeur(), indicateur, valeurMoyenne, dateDebut, dateFin, typeAlerte));
-                   ////System.out.println("Résultat d'évaluation sauvegardé pour le serveur " + evaluation.nomServeur() + " et l'indicateur " + indicateur + " avec la valeur moyenne : " + valeurMoyenne);
-        }
-        //System.out.println("Évaluation terminée pour " + sauvegardeDonnees.getResultats().size() + " mesures.");
-    }
-
-    // Sauvegarde des résultats d'évaluation dans la base de données
-    public void intialiserEvaluations(List<Serveur> serveursList) {
-        for (Serveur serveur : serveursList) {
-            for (TypeIndicateur indicateur : TypeIndicateur.values()) {
-                evaluations.add(new EvaluationMetrique(
-                        serveur.getNomServeur(), indicateur, 0.0, 0));
-            }
-                  
         }
     }
 
-    private void ajouterValeur(String nomServeur, TypeIndicateur indicateur, double valeur) {
-       
-    for (int index = 0; index < evaluations.size(); index++) {
-        EvaluationMetrique evaluation = evaluations.get(index);
-
-        if (Objects.equals(evaluation.nomServeur(), nomServeur)
-                && evaluation.indicateur() == indicateur) {
-          //  System.out.println("Ajout de la valeur " + valeur + " pour le serveur " + nomServeur + " et l'indicateur " + indicateur);
-            evaluations.set(index, new EvaluationMetrique(
-                    nomServeur,
-                    indicateur,
-                    evaluation.valeur() + valeur,
-                    evaluation.nombreValeursCollectees() + 1));
+    private void ajouterValeur(
+            Map<TypeIndicateur, EvaluationMetrique> evaluations,
+            String nomServeur,
+            TypeIndicateur indicateur,
+            double valeur) {
+        EvaluationMetrique evaluation = evaluations.get(indicateur);
+        if (evaluation == null) {
+            evaluations.put(indicateur, new EvaluationMetrique(nomServeur, indicateur, valeur, 1));
             return;
         }
+
+        evaluations.put(indicateur, new EvaluationMetrique(
+                evaluation.nomServeur(),
+                indicateur,
+                evaluation.valeur() + valeur,
+                evaluation.nombreValeursCollectees() + 1));
     }
 
-  
-}
+    private TypeAlerte determinerAlerte(
+            String nomServeur,
+            TypeIndicateur indicateur,
+            double valeurMoyenne) {
+        if (indicateur == TypeIndicateur.Latence && valeurMoyenne > 100) {
+            envoyerAlerte(
+                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms",
+                    true);
+            return TypeAlerte.CRITIQUE;
+        }
+        if (indicateur == TypeIndicateur.Jitter && valeurMoyenne > 10) {
+            envoyerAlerte(
+                    "Le jitter du serveur " + nomServeur + " est élevé : " + valeurMoyenne + " ms",
+                    false);
+            return TypeAlerte.AVERTISSEMENT;
+        }
+        if (indicateur == TypeIndicateur.PertePaquets && valeurMoyenne > 5) {
+            envoyerAlerte(
+                    "La perte de paquets du serveur " + nomServeur + " est élevée : "
+                            + valeurMoyenne + " %",
+                    false);
+        }
+        if (indicateur == TypeIndicateur.Mos && valeurMoyenne < 3) {
+            envoyerAlerte(
+                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne,
+                    true);
+        }
+        return TypeAlerte.NORMAL;
+    }
+
+    private void envoyerAlerte(String message, boolean viaConsole) {
+        notification.envoyerNotificationParEmail(message, "@adminVoip.com");
+        if (viaConsole) {
+            notification.envoyerNotificationViaConsole(message, "@adminVoip.com");
+        }
+    }
+
 }
