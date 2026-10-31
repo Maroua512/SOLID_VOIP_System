@@ -6,6 +6,8 @@ import com.maroua.voip.model.ResultatEvaluation;
 import com.maroua.voip.model.TypeAlerte;
 import com.maroua.voip.model.TypeIndicateur;
 import com.maroua.voip.notifications.Notification;
+import com.maroua.voip.notifications.NotificationParEmail;
+import com.maroua.voip.notifications.NotificationViaConsole;
 
 import java.time.LocalDateTime;
 import java.util.EnumMap;
@@ -22,7 +24,6 @@ public class Evaluation {
             int nombreValeursCollectees) {
     }
 
-    private final Notification notification = new Notification();
     private final SauvegardeDonnees sauvegardeDonnees = new SauvegardeDonnees();
     
    
@@ -98,38 +99,36 @@ public class Evaluation {
             TypeIndicateur indicateur,
             double valeurMoyenne) {
         if (indicateur == TypeIndicateur.Latence && valeurMoyenne > 100) {
-            envoyerAlerte(
-                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms",
-                    true);
+            envoyerAlerte(new NotificationParEmail(),
+                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms");
+            envoyerAlerte(new NotificationViaConsole(),
+                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms");
             return TypeAlerte.CRITIQUE;
         }
         if (indicateur == TypeIndicateur.Jitter && valeurMoyenne > 10) {
-            envoyerAlerte(
-                    "Le jitter du serveur " + nomServeur + " est élevé : " + valeurMoyenne + " ms",
-                    false);
+            envoyerAlerte(new NotificationParEmail(),
+                    "Le jitter du serveur " + nomServeur + " est élevé : " + valeurMoyenne + " ms");
             return TypeAlerte.AVERTISSEMENT;
         }
         if (indicateur == TypeIndicateur.PertePaquets && valeurMoyenne > 5) {
-            envoyerAlerte(
-                    "La perte de paquets du serveur " + nomServeur + " est élevée : "
-                            + valeurMoyenne + " %",
-                    false);
+            envoyerAlerte(new NotificationParEmail(),
+                    "Le pertes du packets dans  " + nomServeur + " est eleve : " + valeurMoyenne);
                      return TypeAlerte.AVERTISSEMENT;
         }
         if (indicateur == TypeIndicateur.Mos && valeurMoyenne < 3) {
-            envoyerAlerte(
-                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne,
-                    true);
+            envoyerAlerte(new NotificationParEmail(),
+                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne);
+                     envoyerAlerte(new NotificationViaConsole(),
+                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne);
+
                    return TypeAlerte.CRITIQUE;
         }
         return TypeAlerte.NORMAL;
     }
 
-    private void envoyerAlerte(String message, boolean viaConsole) {
-        notification.envoyerNotificationParEmail(message, "@adminVoip.com");
-        if (viaConsole) {
-            notification.envoyerNotificationViaConsole(message, "@adminVoip.com");
-        }
+    private void envoyerAlerte(Notification notification, String message) {
+        notification.envoyerNotification(message, "@adminVoip.com");     
+       
     }
 
 }
