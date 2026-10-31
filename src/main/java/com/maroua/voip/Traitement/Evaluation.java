@@ -5,15 +5,14 @@ import com.maroua.voip.model.Metriques;
 import com.maroua.voip.model.ResultatEvaluation;
 import com.maroua.voip.model.TypeAlerte;
 import com.maroua.voip.model.TypeIndicateur;
-import com.maroua.voip.notifications.Notification;
-import com.maroua.voip.notifications.NotificationParEmail;
-import com.maroua.voip.notifications.NotificationViaConsole;
+
 
 import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.maroua.voip.Alerte.DeterminerAlerte;
 
 public class Evaluation {
 
@@ -25,6 +24,7 @@ public class Evaluation {
     }
 
     private final SauvegardeDonnees sauvegardeDonnees = new SauvegardeDonnees();
+    DeterminerAlerte determinerAlerte = new DeterminerAlerte();
     
    
     public void evaluer(List<Metriques> metriquesList) {
@@ -63,7 +63,7 @@ public class Evaluation {
             for (EvaluationMetrique evaluation : serveur.getValue().values()) {
                 double valeurMoyenne = evaluation.valeur() / evaluation.nombreValeursCollectees();
                 TypeIndicateur indicateur = evaluation.indicateur();
-                TypeAlerte typeAlerte = determinerAlerte(evaluation.nomServeur(), indicateur, valeurMoyenne);
+                TypeAlerte typeAlerte = determinerAlerte.determinerAlerte(evaluation.nomServeur(), indicateur, valeurMoyenne);
 
                 sauvegardeDonnees.sauvegarderResultat(new ResultatEvaluation(
                         evaluation.nomServeur(),
@@ -94,41 +94,7 @@ public class Evaluation {
                 evaluation.nombreValeursCollectees() + 1));
     }
 
-    private TypeAlerte determinerAlerte(
-            String nomServeur,
-            TypeIndicateur indicateur,
-            double valeurMoyenne) {
-        if (indicateur == TypeIndicateur.Latence && valeurMoyenne > 100) {
-            envoyerAlerte(new NotificationParEmail(),
-                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms");
-            envoyerAlerte(new NotificationViaConsole(),
-                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms");
-            return TypeAlerte.CRITIQUE;
-        }
-        if (indicateur == TypeIndicateur.Jitter && valeurMoyenne > 10) {
-            envoyerAlerte(new NotificationParEmail(),
-                    "Le jitter du serveur " + nomServeur + " est élevé : " + valeurMoyenne + " ms");
-            return TypeAlerte.AVERTISSEMENT;
-        }
-        if (indicateur == TypeIndicateur.PertePaquets && valeurMoyenne > 5) {
-            envoyerAlerte(new NotificationParEmail(),
-                    "Le pertes du packets dans  " + nomServeur + " est eleve : " + valeurMoyenne);
-                     return TypeAlerte.AVERTISSEMENT;
-        }
-        if (indicateur == TypeIndicateur.Mos && valeurMoyenne < 3) {
-            envoyerAlerte(new NotificationParEmail(),
-                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne);
-                     envoyerAlerte(new NotificationViaConsole(),
-                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne);
-
-                   return TypeAlerte.CRITIQUE;
-        }
-        return TypeAlerte.NORMAL;
-    }
-
-    private void envoyerAlerte(Notification notification, String message) {
-        notification.envoyerNotification(message, "@adminVoip.com");     
-       
-    }
+    
+   
 
 }
