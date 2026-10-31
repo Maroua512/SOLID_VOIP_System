@@ -32,20 +32,18 @@ classDiagram
     }
 
     class Evaluation {
-        -Notification notification
         -SauvegardeDonnees sauvegardeDonnees
+        ~DeterminerAlerte determinerAlerte
         +evaluer(List~Metriques~ metriquesList) void
         -ajouterValeur(Map evaluations, String nomServeur, TypeIndicateur indicateur, double valeur) void
-        -determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) TypeAlerte
-        -envoyerAlerte(String message, boolean viaConsole) void
     }
 
     class EvaluationMetrique {
         <<record>>
-        +String nomServeur
-        +TypeIndicateur indicateur
-        +double valeur
-        +int nombreValeursCollectees
+        +nomServeur : String
+        +indicateur : TypeIndicateur
+        +valeur : double
+        +nombreValeursCollectees : int
     }
 
     class Metriques {
@@ -79,8 +77,25 @@ classDiagram
     }
 
     class Notification {
-        +envoyerNotificationParEmail(String message, String destinataire) void
-        +envoyerNotificationViaConsole(String message, String destinataire) void
+        <<interface>>
+        +envoyerNotification(String message, String destinataire) void
+    }
+
+    class NotificationParEmail {
+        +envoyerNotification(String message, String destinataire) void
+    }
+
+    class NotificationViaConsole {
+        +envoyerNotification(String message, String destinataire) void
+    }
+
+    class DeterminerAlerte {
+        -EnvoyerAlerte ea
+        +determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) TypeAlerte
+    }
+
+    class EnvoyerAlerte {
+        ~envoyerAlerte(Notification notification, String message) void
     }
 
     class Serveur {
@@ -105,19 +120,27 @@ classDiagram
 
     App ..> Evaluation : utilise
     App ..> Metriques : crée
-    Evaluation *-- Notification : possède
     Evaluation *-- SauvegardeDonnees : possède
+    Evaluation *-- DeterminerAlerte : possède
     Evaluation ..> Metriques : évalue
     Evaluation ..> EvaluationMetrique : agrège
     Evaluation ..> ResultatEvaluation : crée
-    Evaluation ..> TypeIndicateur : utilise
-    Evaluation ..> TypeAlerte : détermine
+    DeterminerAlerte *-- EnvoyerAlerte : possède
+    DeterminerAlerte ..> TypeIndicateur : utilise
+    DeterminerAlerte ..> TypeAlerte : retourne
+    EnvoyerAlerte ..> Notification : utilise
+    NotificationParEmail ..|> Notification
+    NotificationViaConsole ..|> Notification
     SauvegardeDonnees o-- ResultatEvaluation : stocke
     EvaluationMetrique --> TypeIndicateur
     ResultatEvaluation --> TypeIndicateur
     ResultatEvaluation --> TypeAlerte
 ```
 
-Le diagramme représente les dépendances entre les classes et les deux énumérations.
-Les maps utilisées temporairement par `evaluer` sont des variables locales et ne
-sont donc pas des attributs de `Evaluation`.
+Le diagramme représente la conception actuelle :
+
+- `Evaluation` utilise `DeterminerAlerte` pour appliquer les règles d’alerte ;
+- `EnvoyerAlerte` reçoit une implémentation de l’interface `Notification` ;
+- `NotificationParEmail` et `NotificationViaConsole` implémentent cette interface ;
+- `SauvegardeDonnees` conserve les résultats d’évaluation ;
+- les maps utilisées temporairement par `evaluer` sont des variables locales.
