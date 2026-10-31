@@ -24,51 +24,16 @@ public class Evaluation {
 
     private final Notification notification = new Notification();
     private final SauvegardeDonnees sauvegardeDonnees = new SauvegardeDonnees();
-
-    public Map<String, Map<TypeIndicateur, Double>> calculerMoyennesParServeur(
-            List<Metriques> metriquesList) {
-        Map<String, Map<TypeIndicateur, double[]>> sommes = new LinkedHashMap<>();
-
-        for (Metriques metrique : metriquesList) {
-            Map<TypeIndicateur, double[]> sommesParIndicateur = sommes.computeIfAbsent(
-                    metrique.getNomServeur(), nom -> new EnumMap<>(TypeIndicateur.class));
-
-            ajouterSomme(sommesParIndicateur, TypeIndicateur.Latence, metrique.getLatence());
-            ajouterSomme(sommesParIndicateur, TypeIndicateur.Jitter, metrique.getJitter());
-            ajouterSomme(sommesParIndicateur, TypeIndicateur.PertePaquets, metrique.getPertePaquets());
-            ajouterSomme(sommesParIndicateur, TypeIndicateur.Mos, metrique.getMos());
-        }
-
-        Map<String, Map<TypeIndicateur, Double>> moyennesParServeur = new LinkedHashMap<>();
-        for (Map.Entry<String, Map<TypeIndicateur, double[]>> serveur : sommes.entrySet()) {
-            Map<TypeIndicateur, Double> moyennes = new EnumMap<>(TypeIndicateur.class);
-            for (Map.Entry<TypeIndicateur, double[]> indicateur : serveur.getValue().entrySet()) {
-                double[] sommeEtNombre = indicateur.getValue();
-                moyennes.put(indicateur.getKey(), sommeEtNombre[0] / sommeEtNombre[1]);
-            }
-            moyennesParServeur.put(serveur.getKey(), moyennes);
-        }
-        return moyennesParServeur;
-    }
-
-    private void ajouterSomme(
-            Map<TypeIndicateur, double[]> sommes,
-            TypeIndicateur indicateur,
-            double valeur) {
-        double[] sommeEtNombre = sommes.computeIfAbsent(indicateur, cle -> new double[2]);
-        sommeEtNombre[0] += valeur;
-        sommeEtNombre[1]++;
-    }
-
+    
+   
     public void evaluer(List<Metriques> metriquesList) {
+     Map<String, Map<TypeIndicateur, EvaluationMetrique>> evaluationsParServeur =  new LinkedHashMap<>();
+     Map<String, LocalDateTime[]> periodesParServeur = new LinkedHashMap<>();
+   
         if (metriquesList.isEmpty()) {
             System.out.println("Aucune métrique à évaluer.");
             return;
         }
-
-        Map<String, Map<TypeIndicateur, EvaluationMetrique>> evaluationsParServeur =
-                new LinkedHashMap<>();
-        Map<String, LocalDateTime[]> periodesParServeur = new LinkedHashMap<>();
 
         for (Metriques metrique : metriquesList) {
             String nomServeur = metrique.getNomServeur();

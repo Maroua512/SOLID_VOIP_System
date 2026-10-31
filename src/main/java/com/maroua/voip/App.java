@@ -7,15 +7,14 @@ import com.maroua.voip.Traitement.Evaluation;
 import com.maroua.voip.model.Metriques;
 import com.maroua.voip.model.Serveur;
 
+
 public final class App {
 
     private App() {
     }
 
     public static void main(String[] args) {
-        List<Serveur> serveurs = List.of(
-                new Serveur("serveur-paris"),
-                new Serveur("serveur-lyon"));
+      
 
         Evaluation evaluation = new Evaluation();
 
@@ -29,8 +28,6 @@ public final class App {
                 new Metriques("serveur-lyon", 55.0, 6.0, 1.0, 4.1,
                         Timestamp.valueOf("2026-10-30 14:07:00")));
 
-        evaluation.calculerMoyennesParServeur(mesures).forEach((serveur, moyennes) ->
-                System.out.println("Moyennes du serveur " + serveur + " : " + moyennes));
         evaluation.evaluer(mesures);
        // System.out.println("Évaluation terminée pour " + mesures.size() + " mesures.");
     }
