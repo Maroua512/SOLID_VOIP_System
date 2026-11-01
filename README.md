@@ -90,7 +90,7 @@ classDiagram
     }
 
     class DeterminerAlerte {
-        -EnvoyerAlerte ea
+        ~Map regles
         +determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) TypeAlerte
     }
 
@@ -125,10 +125,8 @@ classDiagram
     Evaluation ..> Metriques : évalue
     Evaluation ..> EvaluationMetrique : agrège
     Evaluation ..> ResultatEvaluation : crée
-    DeterminerAlerte *-- EnvoyerAlerte : possède
     DeterminerAlerte ..> TypeIndicateur : utilise
     DeterminerAlerte ..> TypeAlerte : retourne
-    EnvoyerAlerte ..> Notification : utilise
     NotificationParEmail ..|> Notification
     NotificationViaConsole ..|> Notification
     SauvegardeDonnees o-- ResultatEvaluation : stocke
@@ -140,7 +138,8 @@ classDiagram
 Le diagramme représente la conception actuelle :
 
 - `Evaluation` utilise `DeterminerAlerte` pour appliquer les règles d’alerte ;
-- `EnvoyerAlerte` reçoit une implémentation de l’interface `Notification` ;
+- `DeterminerAlerte` conserve les seuils dans une map
+  `Map<TypeIndicateur, Map<Double, Boolean>>` ;
 - `NotificationParEmail` et `NotificationViaConsole` implémentent cette interface ;
 - `SauvegardeDonnees` conserve les résultats d’évaluation ;
 - les maps utilisées temporairement par `evaluer` sont des variables locales.
