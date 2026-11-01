@@ -34,6 +34,7 @@ classDiagram
     class Evaluation {
         -SauvegardeDonnees sauvegardeDonnees
         ~DeterminerAlerte determinerAlerte
+        ~EnvoyerAlerte envoyerAlerte
         +evaluer(List~Metriques~ metriquesList) void
         -ajouterValeur(Map evaluations, String nomServeur, TypeIndicateur indicateur, double valeur) void
     }
@@ -90,12 +91,26 @@ classDiagram
     }
 
     class DeterminerAlerte {
-        ~Map regles
+        ~List~RegleSeuil~ regles
         +determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) TypeAlerte
     }
 
+    class RegleSeuil {
+        ~Sens sens
+        ~TypeIndicateur indicateur
+        ~double SeuilCritique
+        ~double SeuilAvertissement
+        +RegleSeuil(Sens sens, TypeIndicateur indicateur, double seuilCritique, double seuilAvertissement)
+    }
+
+    class Sens {
+        <<enumeration>>
+        SUPERIEUR
+        INFERIEUR
+    }
+
     class EnvoyerAlerte {
-        ~envoyerAlerte(Notification notification, String message) void
+        +envoyerAlerte(Notification notification, String message) void
     }
 
     class Serveur {
@@ -122,11 +137,16 @@ classDiagram
     App ..> Metriques : crée
     Evaluation *-- SauvegardeDonnees : possède
     Evaluation *-- DeterminerAlerte : possède
+    Evaluation *-- EnvoyerAlerte : possède
     Evaluation ..> Metriques : évalue
     Evaluation ..> EvaluationMetrique : agrège
     Evaluation ..> ResultatEvaluation : crée
+    DeterminerAlerte o-- RegleSeuil : contient
     DeterminerAlerte ..> TypeIndicateur : utilise
     DeterminerAlerte ..> TypeAlerte : retourne
+    RegleSeuil --> Sens
+    RegleSeuil --> TypeIndicateur
+    EnvoyerAlerte ..> Notification : utilise
     NotificationParEmail ..|> Notification
     NotificationViaConsole ..|> Notification
     SauvegardeDonnees o-- ResultatEvaluation : stocke
@@ -138,8 +158,9 @@ classDiagram
 Le diagramme représente la conception actuelle :
 
 - `Evaluation` utilise `DeterminerAlerte` pour appliquer les règles d’alerte ;
-- `DeterminerAlerte` conserve les seuils dans une map
-  `Map<TypeIndicateur, Map<Double, Boolean>>` ;
+- `DeterminerAlerte` conserve une liste de règles `RegleSeuil` ;
+- `RegleSeuil` définit le sens de comparaison et les seuils critique et avertissement ;
+- `EnvoyerAlerte` dépend de l’interface `Notification` ;
 - `NotificationParEmail` et `NotificationViaConsole` implémentent cette interface ;
 - `SauvegardeDonnees` conserve les résultats d’évaluation ;
 - les maps utilisées temporairement par `evaluer` sont des variables locales.
