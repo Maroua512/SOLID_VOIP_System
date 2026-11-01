@@ -11,8 +11,8 @@ public class DeterminerAlerte {
    
      { regles.put(TypeIndicateur.Latence, Map.of(150.0,true));
       regles.put(TypeIndicateur.Jitter, Map.of(30.0,true));
-      regles.put(TypeIndicateur.Mos, Map.of(1.0,false));
-      regles.put(TypeIndicateur.PertePaquets, Map.of(3.6,true));}
+      regles.put(TypeIndicateur.Mos, Map.of(3.6,false));
+      regles.put(TypeIndicateur.PertePaquets, Map.of(1.0,true));}
 
     public TypeAlerte determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) {
        
