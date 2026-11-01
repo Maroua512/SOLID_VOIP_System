@@ -23,9 +23,9 @@ public final class App {
                         Timestamp.valueOf("2026-10-30 14:00:00")),
                 new Metriques("serveur-paris", 180.0, 80.0, 1.0, 4.2,
                         Timestamp.valueOf("2026-10-30 14:05:00")),
-                new Metriques("serveur-lyon", 45.0, 4.0, 0.5, 4.5,
+                new Metriques("serveur-lyon", 45.0, 4.0, 0.5, 2.5,
                         Timestamp.valueOf("2026-10-30 14:02:00")),
-                new Metriques("serveur-lyon", 55.0, 6.0, 1.0, 4.1,
+                new Metriques("serveur-lyon", 55.0, 6.0, 1.0, 3.1,
                         Timestamp.valueOf("2026-10-30 14:07:00")));
 
         evaluation.evaluer(mesures);
