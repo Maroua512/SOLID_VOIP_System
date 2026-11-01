@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import com.maroua.voip.Alerte.DeterminerAlerte;
+import com.maroua.voip.Alerte.EnvoyerAlerte;
+import com.maroua.voip.notifications.NotificationParEmail;
 
 public class Evaluation {
 
@@ -25,7 +27,7 @@ public class Evaluation {
 
     private final SauvegardeDonnees sauvegardeDonnees = new SauvegardeDonnees();
     DeterminerAlerte determinerAlerte = new DeterminerAlerte();
-    
+    EnvoyerAlerte envoyerAlerte = new EnvoyerAlerte();
    
     public void evaluer(List<Metriques> metriquesList) {
      Map<String, Map<TypeIndicateur, EvaluationMetrique>> evaluationsParServeur =  new LinkedHashMap<>();
@@ -64,7 +66,10 @@ public class Evaluation {
                 double valeurMoyenne = evaluation.valeur() / evaluation.nombreValeursCollectees();
                 TypeIndicateur indicateur = evaluation.indicateur();
                 TypeAlerte typeAlerte = determinerAlerte.determinerAlerte(evaluation.nomServeur(), indicateur, valeurMoyenne);
-
+                if (typeAlerte == TypeAlerte.CRITIQUE) {
+                  
+                   envoyerAlerte.envoyerAlerte(new NotificationParEmail(), "Alerte critique pour le serveur " + evaluation.nomServeur() + " sur l'indicateur " + indicateur);
+                }
                 sauvegardeDonnees.sauvegarderResultat(new ResultatEvaluation(
                         evaluation.nomServeur(),
                         indicateur,

@@ -1,42 +1,35 @@
 package com.maroua.voip.Alerte;
-
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import com.maroua.voip.model.TypeAlerte;
 import com.maroua.voip.model.TypeIndicateur;
-import com.maroua.voip.notifications.NotificationParEmail;
-import com.maroua.voip.notifications.NotificationViaConsole;
+
 
 public class DeterminerAlerte {
-    private EnvoyerAlerte ea = new EnvoyerAlerte();
+  
+   
+   
+    Map<TypeIndicateur,Map<Double,Boolean>> regles = new HashMap<>();
+   
+     { regles.put(TypeIndicateur.Latence, Map.of(150.0,true));
+      regles.put(TypeIndicateur.Jitter, Map.of(30.0,true));
+      regles.put(TypeIndicateur.Mos, Map.of(1.0,true));
+      regles.put(TypeIndicateur.PertePaquets, Map.of(3.6,false));}
 
-     public  TypeAlerte determinerAlerte(
-            String nomServeur,  TypeIndicateur indicateur, double valeurMoyenne) {
-
-        if (indicateur == TypeIndicateur.Latence && valeurMoyenne > 100) {
-           ea.envoyerAlerte(new NotificationParEmail(),
-                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms");
-            ea.envoyerAlerte(new NotificationViaConsole(),
-                    "La latence du serveur " + nomServeur + " est élevée : " + valeurMoyenne + " ms");
-            return TypeAlerte.CRITIQUE;
-        }
-        if (indicateur == TypeIndicateur.Jitter && valeurMoyenne > 10) {
-            ea.envoyerAlerte(new NotificationParEmail(),
-                    "Le jitter du serveur " + nomServeur + " est élevé : " + valeurMoyenne + " ms");
-            return TypeAlerte.AVERTISSEMENT;
-        }
-        if (indicateur == TypeIndicateur.PertePaquets && valeurMoyenne > 5) {
-            ea.envoyerAlerte(new NotificationParEmail(),
-                    "Le pertes du packets dans  " + nomServeur + " est eleve : " + valeurMoyenne);
-                     return TypeAlerte.AVERTISSEMENT;
-        }
-        if (indicateur == TypeIndicateur.Mos && valeurMoyenne < 3) {
-            ea.envoyerAlerte(new NotificationParEmail(),
-                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne);
-                     ea.envoyerAlerte(new NotificationViaConsole(),
-                    "Le MOS du serveur " + nomServeur + " est faible : " + valeurMoyenne);
-
-                   return TypeAlerte.CRITIQUE;
+    public TypeAlerte determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) {
+       
+        Map<Double, Boolean> seuils = regles.get(indicateur);
+        if (seuils != null) {
+            for (Map.Entry<Double, Boolean> entry : seuils.entrySet()) {
+                double seuil = entry.getKey();
+                boolean sens = entry.getValue();
+                if ((sens && valeurMoyenne > seuil) || (!sens && valeurMoyenne < seuil)) {
+                    return TypeAlerte.CRITIQUE;
+                }
+            }
         }
         return TypeAlerte.NORMAL;
     }
 
-}
+    }
