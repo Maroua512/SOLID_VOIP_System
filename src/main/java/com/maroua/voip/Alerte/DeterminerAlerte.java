@@ -1,28 +1,38 @@
 package com.maroua.voip.Alerte;
-import java.util.Map;
-import java.util.HashMap;
+
 import com.maroua.voip.model.TypeAlerte;
 import com.maroua.voip.model.TypeIndicateur;
+import com.maroua.voip.model.Sens;
+import java.util.List;
 
 
 public class DeterminerAlerte {
   
-    Map<TypeIndicateur,Map<Double,Boolean>> regles = new HashMap<>();
-   
-     { regles.put(TypeIndicateur.Latence, Map.of(150.0,true));
-      regles.put(TypeIndicateur.Jitter, Map.of(30.0,true));
-      regles.put(TypeIndicateur.Mos, Map.of(3.6,false));
-      regles.put(TypeIndicateur.PertePaquets, Map.of(1.0,true));}
+  
+    List<RegleSeuil> regles = List.of(
+        new RegleSeuil(Sens.SUPERIEUR, TypeIndicateur.Latence, 150.0, 100.0),
+        new RegleSeuil(Sens.SUPERIEUR, TypeIndicateur.Jitter, 30.0, 20.0),
+        new RegleSeuil(Sens.INFERIEUR, TypeIndicateur.Mos, 3.6, 4.0),
+        new RegleSeuil(Sens.SUPERIEUR, TypeIndicateur.PertePaquets, 1.0, 0.5)
+    );
 
     public TypeAlerte determinerAlerte(String nomServeur, TypeIndicateur indicateur, double valeurMoyenne) {
        
-        Map<Double, Boolean> seuils = regles.get(indicateur);
-        if (seuils != null) {
-            for (Map.Entry<Double, Boolean> entry : seuils.entrySet()) {
-                double seuil = entry.getKey();
-                boolean sens = entry.getValue();
-                if ((sens && valeurMoyenne > seuil) || (!sens && valeurMoyenne < seuil)) {
-                    return TypeAlerte.CRITIQUE;
+      
+        for (RegleSeuil regle : regles) {
+            if (regle.indicateur == indicateur) {
+                if (regle.sens == Sens.SUPERIEUR) {
+                    if (valeurMoyenne > regle.SeuilCritique) {
+                        return TypeAlerte.CRITIQUE;
+                    } else if (valeurMoyenne > regle.SeuilAvertissement) {
+                        return TypeAlerte.AVERTISSEMENT;
+                    }
+                } else if (regle.sens == Sens.INFERIEUR) {
+                    if (valeurMoyenne < regle.SeuilCritique) {
+                        return TypeAlerte.CRITIQUE;
+                    } else if (valeurMoyenne < regle.SeuilAvertissement) {
+                        return TypeAlerte.AVERTISSEMENT;
+                    }
                 }
             }
         }

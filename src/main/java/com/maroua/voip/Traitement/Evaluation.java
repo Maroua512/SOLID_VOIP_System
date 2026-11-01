@@ -15,6 +15,7 @@ import java.util.Map;
 import com.maroua.voip.Alerte.DeterminerAlerte;
 import com.maroua.voip.Alerte.EnvoyerAlerte;
 import com.maroua.voip.notifications.NotificationParEmail;
+import com.maroua.voip.notifications.NotificationViaConsole;
 
 public class Evaluation {
 
@@ -69,6 +70,9 @@ public class Evaluation {
                 if (typeAlerte == TypeAlerte.CRITIQUE) {
                   
                    envoyerAlerte.envoyerAlerte(new NotificationParEmail(), "Alerte critique pour le serveur " + evaluation.nomServeur() + " sur l'indicateur " + indicateur);
+                }
+                else if (typeAlerte == TypeAlerte.AVERTISSEMENT) {
+                    envoyerAlerte.envoyerAlerte(new NotificationViaConsole(), "Avertissement pour le serveur " + evaluation.nomServeur() + " sur l'indicateur " + indicateur);
                 }
                 sauvegardeDonnees.sauvegarderResultat(new ResultatEvaluation(
                         evaluation.nomServeur(),
